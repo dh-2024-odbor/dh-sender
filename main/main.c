@@ -6,6 +6,7 @@
 #include "esp_sleep.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "nvs_flash.h"
 
 // Wakeup constants
 
@@ -26,7 +27,9 @@
 // we use this value as a message
 // id to guarantee uniqueness
 
-static RTC_DATA_ATTR uint32_t boot_count;
+// static RTC_DATA_ATTR uint32_t boot_count;
+
+static nvs_handle_t s_nvs_handle;
 
 // Buffer for the data that is transmitted
 // via LoRa
@@ -34,6 +37,17 @@ static RTC_DATA_ATTR uint32_t boot_count;
 static uint8_t buf[20];
 
 void deep_sleep_task() {
+   esp_err_t ret = nvs_flash_init();
+   if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      ret = nvs_flash_init();
+   }
+   ESP_ERROR_CHECK( ret );
+
+   ret = nvs_open("storage", NVS_READWRITE, &s_nvs_handle);
+
+   ESP_ERROR_CHECK( ret );
+
    ESP_LOGI("main", "device just wokeup");
    // We read the wakeup reason to determine if the RTC timer
    // woke us up
@@ -64,13 +78,27 @@ void deep_sleep_task() {
 
       // Check if the values were successfully read
       // convert them into our format and transmit 
-      // the JSON serialized packet containing them
+      // them as a simple buffer
 
       if (com_rslt == SUCCESS) {
          float temperature = (float) bme280_compensate_temperature_double(v_uncomp_temperature);
          float pressure = (float) bme280_compensate_pressure_double(v_uncomp_pressure) / 100;
          float humidity = (float) bme280_compensate_humidity_double(v_uncomp_humidity);
 
+         uint32_t boot_count;
+
+         // Read the boot_cout from the NVS (non-volatile storage)
+         // AKA permanent storage which keeps data
+         // after power cycle
+         uint32_t ret = nvs_get_u32(s_nvs_handle, "boot_count", &boot_count);
+
+         // If the value does not exist yet
+         // in the NVS default it to 1
+         if (ret == ESP_ERR_NVS_NOT_FOUND) {
+            boot_count = 1;
+         }      
+
+         ESP_LOGI("main", "Boot count: %d", boot_count);
 
          // This is the message format for this device
          // The two enforced fields
@@ -81,8 +109,8 @@ void deep_sleep_task() {
          // which is the number of times
          // the device entered deep sleep
 
-         *buf = NODE_ID;
-         *(buf + 4) = boot_count;
+         *((uint32_t *) buf) = NODE_ID;
+         *((uint32_t *) (buf + 4)) = boot_count;
 
          // This is the arbitrary data part,
          // format for which is defined on the server.
@@ -94,9 +122,14 @@ void deep_sleep_task() {
          *((float *) (buf + 12)) = pressure;
          *((float *) (buf + 16)) = humidity;
 
-         ESP_LOGI("main", "Boot count: %d", boot_count++);
-
          lora_send_packet((uint8_t*) buf, 20);
+
+         // Save the boot_count to the NVS
+         // in the rare case the device resets
+         // or restarts, so ensure the
+         // message_ids remain unique
+
+         nvs_set_u32(s_nvs_handle, "boot_count", boot_count + 1);
       }
    }
 
@@ -107,13 +140,15 @@ void deep_sleep_task() {
    // Needed because the SX1278
    // uses one of these pins
    // which remain connected when if device sleeps
+
    rtc_gpio_isolate(GPIO_NUM_12);
 
    // Put the bme280 sensor into
    // sleep mode so it consumes less current
 
-   // FORCED MODE automatically puts the
+   // NOTE: Forced mode for BME280 automatically puts the
    // device to sleep after a read is requested
+   // which means that the below line is unnecessary
 
    // bme280_set_power_mode(BME280_SLEEP_MODE);
 
@@ -122,24 +157,16 @@ void deep_sleep_task() {
    // power consumption
    lora_sleep();
 
-   // Turn off the RTC IO and the ULP co-processor
-   // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH,   ESP_PD_OPTION_OFF);
+   // Read the time from boot
+   // to determine how much time the
+   // device is up before going back to sleep
 
-   // Since we do not need any memory while we are in deep sleep
-   // we turn off both slow and fast RTC memory
-   //esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-   //esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+   int64_t elapsed_from_boot = esp_timer_get_time();
 
-   // vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-
-   // Turn off the XTAL oscillator
-
-   int64_t bigi = esp_timer_get_time();
-   
-
-   ESP_LOGW("main", "Awake time:  %" PRId32 "%" PRId32 " microseconds\n", (int)(bigi >> 32), (int)bigi);
+   ESP_LOGW("main", "Awake time:  %" PRId32 "%" PRId32 " microseconds\n", (int)(elapsed_from_boot >> 32), (int)elapsed_from_boot);
    ESP_LOGI("main", "Entering deep-sleep");
+
+   // Enter the deep sleep
    esp_deep_sleep_start();
 }
 

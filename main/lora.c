@@ -18,7 +18,11 @@ esp_err_t lora_initialize_radio() {
 
   lora_set_frequency(LORA_FREQ);
 
-  // 
+  // Sets the additional radio
+  // parameters to optimize for power consumption
+  // while balancing time in the air and 
+  // and maximum transmission distance
+
   lora_set_bandwidth(125E6);
   lora_set_spreading_factor(12);
   lora_set_coding_rate(5);
@@ -27,10 +31,11 @@ esp_err_t lora_initialize_radio() {
 
   // Enables CRC checking which
   // ensures received package integrity
+  // The radio automatically rejects
+  // the packet if it sees
+  // that the CRC value is incorrect
 
   lora_enable_crc();
-
-  // Creates a new RTOS TASK
 
   return ESP_OK;  
 }
