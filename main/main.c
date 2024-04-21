@@ -42,6 +42,7 @@ void deep_sleep_task() {
       ESP_ERROR_CHECK(nvs_flash_erase());
       ret = nvs_flash_init();
    }
+
    ESP_ERROR_CHECK( ret );
 
    ret = nvs_open("storage", NVS_READWRITE, &s_nvs_handle);
@@ -157,9 +158,9 @@ void deep_sleep_task() {
    // power consumption
    lora_sleep();
 
-   // Read the time from boot
+   // Read the time elapsed from boot
    // to determine how much time the
-   // device is up before going back to sleep
+   // device has been up
 
    int64_t elapsed_from_boot = esp_timer_get_time();
 
@@ -188,35 +189,6 @@ void app_main()
 
    // Initialite lora radio module
    ESP_ERROR_CHECK(lora_initialize_radio());
-
-   // bme280 sensor testing
-
-   /* while (true) {
-      s32 v_uncomp_temperature;
-      s32 v_uncomp_humidity;
-      s32 v_uncomp_pressure;
-
-
-      s32 com_rslt = bme280_read_uncomp_pressure_temperature_humidity(
-         &v_uncomp_pressure, &v_uncomp_temperature, &v_uncomp_humidity
-      );
-
-      if (com_rslt == SUCCESS) {
-         double temperature = bme280_compensate_temperature_double(v_uncomp_temperature);
-         double pressure = bme280_compensate_pressure_double(v_uncomp_pressure);
-         double humidity = bme280_compensate_humidity_double(v_uncomp_humidity);
-
-         char buf[80];
-         
-         ssize_t bufsiz = sprintf(buf, "{\"t\": %f, \"h\": %f, \"p\": %f }", temperature, humidity, pressure);
-
-         ESP_LOGI("main", "Received %s", buf);
-      }
-
-      vTaskDelay(5000 / portTICK_PERIOD_MS);
-   } */
-
-   
 
    // Create the task which reads data from sensors
    // transmits it then returns all devices to low-consumption
