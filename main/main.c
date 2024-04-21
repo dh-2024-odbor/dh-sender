@@ -101,6 +101,8 @@ void deep_sleep_task() {
 
          ESP_LOGI("main", "Boot count: %d", boot_count);
 
+         printf("Sending message: node_id: %d, message_id: %d, data: %", NODE_ID, boot_count);
+
          // This is the message format for this device
          // The two enforced fields
          // and NODE_ID which identifies the device
