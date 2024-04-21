@@ -69,7 +69,7 @@ esp32 to switch between two operating modes. Deep sleep mode and the
 normal operation mode.
 
 In deep sleep (also called hibernation mode, provided more ICs are turned off) the only IC
-on the esp32 left running is the RTC timer. The LoRA radio is also put into sleep mode
+on the esp32 left running is the RTC timer. The LoRa radio is also put into sleep mode
 as well as the temperature sensor.
 
 The RTC timer can be configured as a wakeup source for the main CPU.
@@ -100,7 +100,7 @@ Note: This is an example of a measure device. This system can support any type o
 
 ### Main board - ESP32-VROOM-32D
 
-Note: This board is completely unnecessary it has many features that are not in use by our system but this is what we could get in such a short amount of time. In reality power consumption by the main board would me much lower.
+Note: This board is completely unnecessary it has many features that are not in use by our system but this is what we could get in such a short amount of time. In reality power consumption by the main board would be much lower.
 
 * Sleep mode (ULP Coprocessor turned disabled) - 2.5 uA
 * Sleep mode (with ULP Coprocessor enabled) - 10 uA
@@ -122,7 +122,7 @@ This equates to around 291 days.
 
 But because power consumption is so low (practically 0) when the devices are in deep sleep, it GREATLY improves overall consumption if we wait longer in deep sleep state.
 
-For example if we just raise the interval between measurements from 20 seconds to 1 minute (60) seconds we get:
+For example if we just raise the interval between measurements from 20 seconds to 1 minute (60) seconds we get 883 days.
 
 
 
