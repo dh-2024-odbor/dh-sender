@@ -9,7 +9,7 @@ as well as the main deep_sleep_task which handles putting the devices into deep 
 after taking a sensor reading and transmitting it via LoRa radio.
 
 The `lora.c` file contains initialization code for the LoRa radio,
-while the `bme.c` file contains initializationcode for the BME280 sensor.
+while the `bme.c` file contains initialization code for the BME280 sensor.
 
 The firmware is developed using ESP-IDF v5.1-dirty (stable) (Espressif IoT Development Framework)
 which is standard for the ESP32 series of microcontrollers that we use.
